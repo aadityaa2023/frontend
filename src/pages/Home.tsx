@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { postsApi } from "../api/postsApi";
 import PostCard from "../components/PostCard";
-import type  { Post } from "../types/post";
+import type { Post } from "../types/post";
+
+interface PostPage {
+  content: Post[];
+  number: number;
+  totalPages: number;
+}
 
 const Home: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -12,18 +18,20 @@ const Home: React.FC = () => {
   const fetch = async (p = 0) => {
     setLoading(true);
     try {
-      const data = await postsApi.list(p, 10);
+      const data: PostPage = await postsApi.list(p, 10);
       setPosts(data.content);
       setPage(data.number);
       setTotalPages(data.totalPages);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to fetch posts:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetch(0); }, []);
+  useEffect(() => {
+    fetch(0);
+  }, []);
 
   return (
     <section>
@@ -33,23 +41,37 @@ const Home: React.FC = () => {
 
       {loading ? (
         <div className="grid gap-4">
-          {[1,2,3].map(i => <div key={i} className="h-28 bg-white animate-pulse rounded" />)}
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-28 bg-white animate-pulse rounded" />
+          ))}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {posts.map(p => <PostCard key={p.id} post={p} />)}
+          {posts.map((p) => (
+            <PostCard key={p.id} post={p} />
+          ))}
         </div>
       )}
 
       <div className="mt-6 flex items-center justify-between">
-        <div className="text-sm text-gray-600">Page {page + 1} of {totalPages}</div>
+        <div className="text-sm text-gray-600">
+          Page {page + 1} of {totalPages}
+        </div>
         <div className="flex gap-2">
-          <button onClick={() => fetch(Math.max(0, page - 1))}
-                  disabled={page <= 0}
-                  className="px-3 py-1 bg-white border rounded disabled:opacity-60">Previous</button>
-          <button onClick={() => fetch(Math.min(totalPages - 1, page + 1))}
-                  disabled={page >= totalPages - 1}
-                  className="px-3 py-1 bg-white border rounded disabled:opacity-60">Next</button>
+          <button
+            onClick={() => fetch(Math.max(0, page - 1))}
+            disabled={page <= 0}
+            className="px-3 py-1 bg-white border rounded disabled:opacity-60"
+          >
+            Previous
+          </button>
+          <button
+            onClick={() => fetch(Math.min(totalPages - 1, page + 1))}
+            disabled={page >= totalPages - 1}
+            className="px-3 py-1 bg-white border rounded disabled:opacity-60"
+          >
+            Next
+          </button>
         </div>
       </div>
     </section>

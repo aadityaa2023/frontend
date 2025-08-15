@@ -2,13 +2,14 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import PostForm from "../components/PostForm";
 import { postsApi } from "../api/postsApi";
-import  type { Post } from "../types/post";
+import type { Post } from "../types/post";
 import { formatDate } from "../utils/date";
 
 const CreateEdit: React.FC = () => {
   const [search] = useSearchParams();
   const editId = search.get("edit");
   const navigate = useNavigate();
+
   const [initial, setInitial] = useState<Post | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -16,9 +17,10 @@ const CreateEdit: React.FC = () => {
   useEffect(() => {
     if (!editId) return;
     setLoading(true);
-    postsApi.get(Number(editId))
-      .then((data) => setInitial(data))
-      .catch((err) => console.error(err))
+    postsApi
+      .get(Number(editId))
+      .then((data: Post) => setInitial(data))
+      .catch((err) => console.error("Failed to load post:", err))
       .finally(() => setLoading(false));
   }, [editId]);
 
@@ -29,11 +31,15 @@ const CreateEdit: React.FC = () => {
         await postsApi.update(Number(editId), payload);
         navigate(`/posts/${editId}`);
       } else {
-        const created = await postsApi.create(payload);
-        navigate(`/posts/${created.id}`);
+        const created: Post = await postsApi.create(payload);
+        if (created.id) {
+          navigate(`/posts/${created.id}`);
+        } else {
+          throw new Error("Post creation returned no ID");
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error("Failed to submit post:", err);
       alert("Failed to submit");
     } finally {
       setSubmitting(false);
@@ -43,8 +49,14 @@ const CreateEdit: React.FC = () => {
   return (
     <section>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{editId ? "Edit Post" : "Create Post"}</h1>
-        {initial && <div className="text-sm text-gray-500">Last edited: {formatDate(initial.updatedAt)}</div>}
+        <h1 className="text-2xl font-semibold">
+          {editId ? "Edit Post" : "Create Post"}
+        </h1>
+        {initial?.updatedAt && (
+          <div className="text-sm text-gray-500">
+            Last edited: {formatDate(initial.updatedAt)}
+          </div>
+        )}
       </div>
 
       {loading ? (
