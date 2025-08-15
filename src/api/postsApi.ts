@@ -1,81 +1,82 @@
-// src/api/postsApi.ts
-import axios, { AxiosError, type AxiosInstance } from "axios";
+import axios, { type AxiosInstance, AxiosError } from "axios";
+
+
 import type { Post } from "../types/post";
 
-/** Generic Spring Page<T> shape */
-export interface Page<T> {
-  content: T[];
-  number: number;
-  totalPages: number;
-  totalElements: number;
-  size: number;
-  first: boolean;
-  last: boolean;
-  // (optional fields Spring may include)
-  sort?: unknown;
-  pageable?: unknown;
-  numberOfElements?: number;
-  empty?: boolean;
-}
+// Base URL (from .env or fallback to localhost)
+const base = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
 
-/** Payload types */
-export type PostCreate = Omit<Post, "id" | "createdAt" | "updatedAt">;
-export type PostUpdate = Partial<PostCreate> & PostCreate; // same fields as create, can be partial if you want
-
-/** Resolve base URL safely without breaking the protocol slashes */
-const apiBase =
-  (import.meta as any)?.env?.VITE_API_BASE_URL?.toString() ||
-  "http://localhost:8080/api";
-
-/** Ensure no trailing slash, then append /posts */
-const baseURL = `${apiBase.replace(/\/+$/, "")}/posts`;
-
+// Create Axios instance
 const client: AxiosInstance = axios.create({
-  baseURL,
-  timeout: 10000,
-  headers: { "Content-Type": "application/json" },
-  // Set this to true only if you use cookies/sessions *and* your CORS allows credentials
-  withCredentials: false,
+  baseURL: `${base}/posts`,
+  timeout: 5000,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-/** Optional: surface cleaner errors */
-client.interceptors.response.use(
-  (res) => res,
-  (err: AxiosError) => {
-    // You can log or transform here
-    return Promise.reject(err);
-  }
-);
-
+// API service
 export const postsApi = {
-  /** GET /api/posts?page=&size= */
-  async list(page = 0, size = 10): Promise<Page<Post>> {
-    const res = await client.get<Page<Post>>("", { params: { page, size } });
-    return res.data;
+  list: async (page = 0, size = 10) => {
+    try {
+      const res = await client.get("", { params: { page, size } });
+      return res.data as {
+        content: Post[];
+        number: number;
+        totalPages: number;
+      };
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
   },
 
-  /** GET /api/posts/{id} */
-  async get(id: number): Promise<Post> {
-    const res = await client.get<Post>(`/${id}`);
-    return res.data;
+  get: async (id: number) => {
+    try {
+      const res = await client.get(`/${id}`);
+      return res.data as Post;
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
   },
 
-  /** POST /api/posts */
-  async create(payload: PostCreate): Promise<Post> {
-    const res = await client.post<Post>("", payload);
-    return res.data;
+  create: async (payload: Post) => {
+    try {
+      const res = await client.post("", payload);
+      return res.data as Post;
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
   },
 
-  /** PUT /api/posts/{id} */
-  async update(id: number, payload: PostUpdate): Promise<Post> {
-    const res = await client.put<Post>(`/${id}`, payload);
-    return res.data;
+  update: async (id: number, payload: Post) => {
+    try {
+      const res = await client.put(`/${id}`, payload);
+      return res.data as Post;
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
   },
 
-  /** DELETE /api/posts/{id} */
-  async remove(id: number): Promise<void> {
-    await client.delete<void>(`/${id}`);
+  remove: async (id: number) => {
+    try {
+      await client.delete(`/${id}`);
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
   },
 };
 
-export default postsApi;
+// Error handler
+function handleError(error: unknown): void {
+  if (axios.isAxiosError(error)) {
+    const err = error as AxiosError;
+    console.error("Axios error:", err.message, err.response?.data);
+  } else {
+    console.error("Unexpected error:", error);
+  }
+}
